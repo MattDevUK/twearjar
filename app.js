@@ -8,6 +8,7 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/index');
 var users = require('./routes/users');
 
+var rudies = ["fuck","shit","piss","bitch","cunt","crap"]
 
 
 // TWITTER
@@ -20,13 +21,54 @@ var twit = new twitter({
     access_token_secret: 'StIf08gotStMfBY6onj0E3k68SVe2SsRfq7zH1WpmIWVC'
 });
 
-twit.get('/statuses/user_timeline.json', {user_id: "2821769120", screen_name: "twearjar"}, function(data) {
-    // console.log(util.inspect(data));
-    data.map(function(tweet) {
-        console.log("TWEET", tweet.text);
-    });
-});
+function getTweets(user_id, last_id) {
+    if(typeof(user_id)==='undefined') user_id = "2821769120";
+    if(typeof(screen_name)==='undefined') screen_name = "twearjar";
+    if(typeof(last_id)==='undefined') {
+        twit.get('/statuses/user_timeline.json', {user_id: user_id}, function(data) {
+            // console.log(util.inspect(data));
+            data.reverse().map(function(tweet) {
+                tweetStr = tweet.text;
+                tweetId = tweet.id_str;
+                //console.log("TWEET", tweet.text);
+                //console.log("ID", tweet.id_str);
+                analyseTweet(tweet.text, tweet.id_str);
+            });
+            //update latest_tweet_id in mongo
+            console.log("Updating latest_tweet_id to:", tweetId)
+
+        });
+    } else {
+        twit.get('/statuses/user_timeline.json', {user_id: user_id, screen_name: screen_name, since_id: last_id}, function(data) {
+            // console.log(util.inspect(data));
+            data.map(function(tweet) {
+                //console.log("TWEET", tweet.text);
+                //console.log("ID", tweet.id_str);
+            });
+        });
+    }
+}
 // END TWITTER
+
+function analyseTweet(tweet, tweet_id) {
+    console.log("Analysing:", tweet)
+    if (rudies.some(function(v) { return tweet.indexOf(v) >= 0; })) {
+        console.log("Swearing Confirmed!");
+
+        // Update Mongo to increase counter by one
+    }
+}
+
+function keepThePeace() {
+//Read mongo record where user_id matches
+//  If latest_tweet_id == null:
+//     getTweets(username)
+//  else
+//     getTweets(username, last_tweet_id)
+getTweets();
+}
+
+//setTimeout(function() { keepThePeace(); }, 5000);
 
 var app = express();
 
