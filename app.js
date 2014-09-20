@@ -8,6 +8,26 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/index');
 var users = require('./routes/users');
 
+
+
+// TWITTER
+var util = require('util'),
+    twitter = require('twitter');
+var twit = new twitter({
+    consumer_key: 'JplMpBToraYFwcDuy9vumwR1d',
+    consumer_secret: '5LJSXMEEu8nYTU7fSE2dcECNBtujtXsq6eXS3llai92uKdgulW',
+    access_token_key: '2821769120-oMJYGrCtZFRB3yudx2dyXCdSOMAL2RAswtgZkqT',
+    access_token_secret: 'StIf08gotStMfBY6onj0E3k68SVe2SsRfq7zH1WpmIWVC'
+});
+
+twit.get('/statuses/user_timeline.json', {user_id: "2821769120", screen_name: "twearjar"}, function(data) {
+    // console.log(util.inspect(data));
+    data.map(function(tweet) {
+        console.log("TWEET", tweet.text);
+    });
+});
+// END TWITTER
+
 var app = express();
 
 // view engine setup
