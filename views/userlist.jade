@@ -1,0 +1,11 @@
+extends layout
+
+block content
+    h1.
+        User List
+    ul
+        each user, i in userlist
+            li
+                "User: #{user.username}"
+                br
+                "Swear count: #{user.swearCount}"
