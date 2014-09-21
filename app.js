@@ -12,7 +12,7 @@ var db = monk('localhost:27017/twearjar');
 var routes = require('./routes/index');
 var users = require('./routes/users');
 
-var rudies = ["fuck","shit","piss","bitch","cunt","crap","dick","cock"];
+var rudies = ["damn","hell","bloody","shit","crap"];
 
 // TWITTER AUTH
 var util = require('util'),
@@ -44,37 +44,36 @@ function analyseTweet(user_id, tweet, tweet_id) {
 
 // Get users last tweets and analyse them for swear words
 function getTweets(user_id, last_id) {
-    console.log("Reading Tweets...\n")
+    console.log("Reading Tweets for "+user_id+"...\n")
     if(typeof(user_id)==='undefined') user_id = "2821769120";
-    if(typeof(screen_name)==='undefined') screen_name = "twearjar";
     if(typeof(last_id)==='undefined') {
+        //console.log("Last_tweet id NOT specified");
         twit.get('/statuses/user_timeline.json', {user_id: user_id}, function(data) {
             //console.log(data);
             data.reverse().map(function(tweet) {
                 tweetStr = tweet.text;
                 tweetId = tweet.id_str;
-                //console.log("TWEET", tweet.text);
-                //console.log("ID", tweet.id_str);
                 analyseTweet(user_id, tweet.text, tweet.id_str);
             });
             //update latest_tweet_id in mongo
-            console.log("Updating latest_tweet_id to:", tweetId);
+            console.log("Updating last_tweet_id...");
             updateLastTweetId(user_id, tweetId);
 
         });
     } else {
-        twit.get('/statuses/user_timeline.json', {user_id: user_id, since_id: last_id}, function(data) {
-            // console.log(util.inspect(data));
-            data.map(function(tweet) {
-                //console.log("TWEET", tweet.text);
-                //console.log("ID", tweet.id_str);
-                tweetStr = tweet.text;
-                tweetId = tweet.id_str;
-                analyseTweet(user_id, tweet.text, tweet.id_str);
-            });
-            //update latest_tweet_id in mongo
-            console.log("Updating latest_tweet_id to:", tweetId);
-            updateLastTweetId(user_id, tweetId);
+        //console.log("Last_tweet id specified", last_id);
+        twit.get('/statuses/user_timeline.json', {since_id:last_id,user_id:user_id}, function(data) {
+            //console.log(data);
+            //data.map(function(tweet) {
+            //    console.log("TWEET", tweet.text);
+            //    console.log("ID", tweet.id_str);
+            //    var tweetStr = tweet.text;
+            //    var tweetId = tweet.id_str;
+            //    analyseTweet(user_id, tweet.text, tweet.id_str);
+            //});
+            ////update latest_tweet_id in mongo
+            //console.log("Updating latest_tweet_id to:", tweetId, "for:", user_id);
+            //updateLastTweetId(user_id, tweetId);
         });
     }
 }
@@ -107,11 +106,11 @@ function getUserSwearCount(user_id) {
 };
 
 // Retrieve the user data from database
-function getUserData(user_id) {
+function getUserData(user_id, callback) {
     var users = db.get("usercollection");
     users.findOne({user_id: user_id}, function(e, doc) {
         // console.log("DOCUMENT:", doc);
-        return doc;
+        callback(doc);
     });
 }
 
@@ -121,7 +120,7 @@ function addUser(user_id) {
     users.count({user_id: user_id}, function(e, count) {
     // console.log("ADD-COUNT", count);
     if (count === 0) {
-        console.log("ADDING:", user_id);
+        console.log("ADDING USER:", user_id);
         getUserTwitterInfo(user_id, function(info){
             //console.log("USER_INFO2:", info);
             users.insert({user_id:info.user_id, username:"@"+info.username, swearCount:0, totalSwearCount:0})
@@ -137,7 +136,7 @@ function addUser(user_id) {
 function getFollowers(user_id) {
     // console.log("user_id", user_id)
     twit.get('/followers/ids.json', {user_id: user_id}, function(data) {
-    console.log("DATA", data)
+    //console.log("DATA", data)
     // console.log("IDS",data.ids);
     var followers = data.ids;
     followers.forEach(function(follower) {
@@ -152,15 +151,24 @@ function getFollowers(user_id) {
 
 // Update last_tweet_id in database
 function updateLastTweetId(user_id, last_tweet_id) {
+    //console.log("Updating latest tweet id for "+user_id)
     var users = db.get("usercollection");
     users.findAndModify({user_id: user_id}, { $set: {last_tweet_id: last_tweet_id} });
 }
 
 // Main function
 function keepThePeace() {
+    // First demo (Adding following users to DB)
     getFollowers("2821769120");
+    
+    // Second Demo (Getting and Analysing Tweets from User)
     //getTweets("2821769120");
+
+    // Third Demo (Broken)(Getting Tweets from User after specific date)
     //getTweets("2821769120", "513302382969913344");
+}
+
+
 
 // //Read mongo record where user_id matches
 // //  If latest_tweet_id == null:
@@ -168,12 +176,51 @@ function keepThePeace() {
 // //  else
 // //     getTweets(username, last_tweet_id)
 
+    //getUserData("2821769120", function(data) {
+    //    console.log("Latest_Id", data.last_tweet_id)
+    //    if (typeof data.last_tweet_id === 'undefined') {
+    //        getTweets(data.user_id);
+    //    } else {
+    //        getTweets(data.user_id, data.last_tweet_id);
+    //    }
+    //});
+
     //getUserTwitterInfo("2821769120")//
-}
+//}
 
 
 // Interval set to 10s for demo, would normally be 5m
-setInterval(function() { keepThePeace(); }, 10000);
+//setInterval(function() { keepThePeace(); }, 10000);
+keepThePeace();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 var app = express();
 
