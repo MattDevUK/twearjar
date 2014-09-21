@@ -12,9 +12,9 @@ var db = monk('localhost:27017/twearjar');
 var routes = require('./routes/index');
 var users = require('./routes/users');
 
-var rudies = ["fuck","shit","piss","bitch","cunt","crap"];
+var rudies = ["fuck","shit","piss","bitch","cunt","crap","dick","cock"];
 
-// TWITTER
+// TWITTER AUTH
 var util = require('util'),
     twitter = require('twitter');
 var twit = new twitter({
@@ -31,13 +31,12 @@ function increaseUserSwearCount(user_id) {
     users.findAndModify({user_id: user_id}, { $inc: {swearCount: 1} });
 }
 
-// Check tweet contents for swear words
+// Check tweet contents for swear words, if found, increase counter
 function analyseTweet(user_id, tweet, tweet_id) {
     console.log("Analysing:", tweet);
     if (rudies.some(function(v) { return tweet.indexOf(v) >= 0; })) {
         console.log("Swearing Confirmed!");
         increaseUserSwearCount(user_id);
-        // Update Mongo to increase counter by one
     }
 }
 
@@ -71,6 +70,19 @@ function getTweets(user_id, last_id) {
     }
 }
 
+function getUserTwitterInfo(user_id) {
+    twit.get('/users/show.json', {user_id: user_id}, function(data) {
+            //console.log("GETINFO-DATA",data);
+            user_id = data.id_str;
+            console.log("GETINFO-USER_ID",user_id);
+            username = data.screen_name;
+            console.log("GETINFO-USERNAME",username);
+            //console.log("TWEET", tweet.text);
+            //console.log("ID", tweet.id_str);
+    });
+        return (user_id, username);
+}
+
 
 // Retrieve the users total swear count from database
 function getUserSwearCount(user_id) {
@@ -80,7 +92,7 @@ function getUserSwearCount(user_id) {
         swearCount = doc.swearCount;
         return swearCount;
     });
-}
+};
 
 // Retrieve the user data from database
 function getUserData(user_id) {
@@ -91,12 +103,34 @@ function getUserData(user_id) {
     });
 }
 
+function addUser(user_id) {
+    var users = db.get("usercollection");
+    console.log("ADD-USER_ID", user_id);
+    users.count({user_id: user_id}, function(e, count) {
+    console.log("ADD-COUNT", count);
+    if (count === 0) {
+        console.log("ADDING:", user_id);
+        getUserTwitterInfo(user_id, function(info){
+            console.log("USER_INFO:", info);
+            users.update({user_id:info.user_id, username:info.username, swearCount:0})
+            
+        });
+    }
+    });
+}
+
+// Get list of IDs following account
 function getFollowers(user_id) {
+    console.log("user_id", user_id)
    twit.get('/followers/ids.json', {user_id: user_id}, function(data) {
-    console.log(data.ids);
-    followers = data.ids;
-    followers.forEach(function(id) {
-        getUserSwearCount(id);
+    console.log("DATA", data)
+    console.log("IDS",data.ids);
+    var followers = data.ids;
+    followers.forEach(function(follower) {
+        console.log("FOLLOWER",follower);
+        addUser(String(follower), function(callback) {
+            callback();
+        });
     });
    }); 
 }
@@ -116,15 +150,16 @@ function keepThePeace() {
 // //  else
 // //     getTweets(username, last_tweet_id)
 
-    var userdata = getUserData("2821769120");
-    console.log("data:", userdata);
+    //var userdata = getUserData("2821769120");
+    //console.log("data:", userdata);
 
     //var count = getUserSwearCount("2821769120");
     //console.log("Count",count);
 
     //getTweets();
     //getTweets("2821769120","513358333106225152");
-    //getFollowers("2821769120")
+    getFollowers("2821769120")
+    //getUserTwitterInfo("2821769120")
 }
 
 
