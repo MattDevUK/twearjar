@@ -28,15 +28,17 @@ var twit = new twitter({
 // Increase the users total swear count in database
 function increaseUserSwearCount(user_id) {
     var users = db.get("usercollection");
-    users.findAndModify({user_id: user_id}, { $inc: {swearCount: 1} });
+    users.findAndModify({user_id: user_id}, { $inc: {swearCount: 1, totalSwearCount: 1} });
 }
 
 // Check tweet contents for swear words, if found, increase counter
 function analyseTweet(user_id, tweet, tweet_id) {
-    console.log("Analysing:", tweet);
+    console.log("Analysing: '"+tweet+"'");
     if (rudies.some(function(v) { return tweet.indexOf(v) >= 0; })) {
-        console.log("Swearing Confirmed!");
+        console.log("Result: Swearing Confirmed!");
         increaseUserSwearCount(user_id);
+    } else {
+        console.log("Result: Wow, you kept this one clean!");
     }
 }
 
@@ -46,7 +48,7 @@ function getTweets(user_id, last_id) {
     if(typeof(screen_name)==='undefined') screen_name = "twearjar";
     if(typeof(last_id)==='undefined') {
         twit.get('/statuses/user_timeline.json', {user_id: user_id}, function(data) {
-            console.log(data);
+            //console.log(data);
             data.reverse().map(function(tweet) {
                 tweetStr = tweet.text;
                 tweetId = tweet.id_str;
@@ -74,14 +76,14 @@ function getUserTwitterInfo(user_id, callback) {
     twit.get('/users/show.json', {user_id: user_id}, function(data) {
             //console.log("GETINFO-DATA",data);
             user_id = data.id_str;
-            console.log("GETINFO-USER_ID",user_id);
+            //console.log("GETINFO-USER_ID",user_id);
             username = data.screen_name;
-            console.log("GETINFO-USERNAME",username);
+            // console.log("GETINFO-USERNAME",username);
             var user_info = {
                 "user_id": user_id, 
                 "username": username.toLowerCase()
             };
-            console.log("USER_INFO:", user_info);
+            // console.log("USER_INFO:", user_info);
             callback(user_info);
     });
 }
@@ -91,7 +93,7 @@ function getUserTwitterInfo(user_id, callback) {
 function getUserSwearCount(user_id) {
     var users = db.get("usercollection");
     users.findOne({user_id: user_id}, function(e, doc) {
-        console.log("SwearCount:", doc.swearCount);
+        // console.log("SwearCount:", doc.swearCount);
         swearCount = doc.swearCount;
         return swearCount;
     });
@@ -101,7 +103,7 @@ function getUserSwearCount(user_id) {
 function getUserData(user_id) {
     var users = db.get("usercollection");
     users.findOne({user_id: user_id}, function(e, doc) {
-        console.log("DOCUMENT:", doc);
+        // console.log("DOCUMENT:", doc);
         return doc;
     });
 }
@@ -115,7 +117,7 @@ function addUser(user_id) {
         console.log("ADDING:", user_id);
         getUserTwitterInfo(user_id, function(info){
             console.log("USER_INFO2:", info);
-            users.insert({user_id:info.user_id, username:"@"+info.username, swearCount:0})
+            users.insert({user_id:info.user_id, username:"@"+info.username, swearCount:0, totalSwearCount:0})
             
         });
     }
@@ -159,15 +161,15 @@ function keepThePeace() {
     //var count = getUserSwearCount("2821769120");
     //console.log("Count",count);
 
-    //getTweets();
-    //getTweets("2821769120","513358333106225152");
-    getFollowers("2821769120")
-    //getUserTwitterInfo("2821769120")
+    getTweets("2821769120");
+    //getTweets("2821769120", "513358333106225152");
+    //getFollowers("2821769120")
+    //getUserTwitterInfo("2821769120")//
 }
 
 
 
-//setTimeout(function() { keepThePeace(); }, 5000);
+setTimeout(function() { keepThePeace(); }, 5000);
 
 var app = express();
 
@@ -223,6 +225,6 @@ app.use(function(err, req, res, next) {
     });
 });
 
-keepThePeace();
+//keepThePeace();
 
 module.exports = app;
