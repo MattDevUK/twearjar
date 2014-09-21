@@ -6,7 +6,7 @@ A Swear Jar for Twitter.
 The Aim
 =======
 
-*    When someone follows the `@twearjar` Twitter handle, their username is placed into our Mongo database. `getFollowers("2821769120")`.
+*    When someone follows the `@twearjar` Twitter handle, their username is placed into our Mongo database. `getFollowers("2821769120") [RATE LIMITED]`.
 *    Over time, the bot monitors the tweets of users in the database and analyses the contents for any listed "bad" words. `getTweets("2821769120")`
 *    Every time a tweet contains one of the words a counter is incremented for that account. `increaseUserSwearCount(<USER_ID>)`
 *    On a regular schedule, be it weekly or monthly, the score is totaled up and a link to donate the score amount in £ is generated and tweeted back to the person. `Not Implemented`

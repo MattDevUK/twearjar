@@ -35,15 +35,16 @@ function increaseUserSwearCount(user_id) {
 function analyseTweet(user_id, tweet, tweet_id) {
     console.log("Analysing: '"+tweet+"'");
     if (rudies.some(function(v) { return tweet.indexOf(v) >= 0; })) {
-        console.log("Result: Swearing Confirmed!");
+        console.log("Result: Obscenities Confirmed!\n");
         increaseUserSwearCount(user_id);
     } else {
-        console.log("Result: Wow, you kept this one clean!");
+        console.log("Result: Wow, you kept this one clean!\n");
     }
 }
 
 // Get users last tweets and analyse them for swear words
 function getTweets(user_id, last_id) {
+    console.log("Reading Tweets...\n")
     if(typeof(user_id)==='undefined') user_id = "2821769120";
     if(typeof(screen_name)==='undefined') screen_name = "twearjar";
     if(typeof(last_id)==='undefined') {
@@ -62,12 +63,18 @@ function getTweets(user_id, last_id) {
 
         });
     } else {
-        twit.get('/statuses/user_timeline.json', {user_id: user_id, screen_name: screen_name, since_id: last_id}, function(data) {
+        twit.get('/statuses/user_timeline.json', {user_id: user_id, since_id: last_id}, function(data) {
             // console.log(util.inspect(data));
             data.map(function(tweet) {
                 //console.log("TWEET", tweet.text);
                 //console.log("ID", tweet.id_str);
+                tweetStr = tweet.text;
+                tweetId = tweet.id_str;
+                analyseTweet(user_id, tweet.text, tweet.id_str);
             });
+            //update latest_tweet_id in mongo
+            console.log("Updating latest_tweet_id to:", tweetId);
+            updateLastTweetId(user_id, tweetId);
         });
     }
 }
@@ -110,29 +117,31 @@ function getUserData(user_id) {
 
 function addUser(user_id) {
     var users = db.get("usercollection");
-    console.log("ADD-USER_ID", user_id);
+    // console.log("ADD-USER_ID", user_id);
     users.count({user_id: user_id}, function(e, count) {
-    console.log("ADD-COUNT", count);
+    // console.log("ADD-COUNT", count);
     if (count === 0) {
         console.log("ADDING:", user_id);
         getUserTwitterInfo(user_id, function(info){
-            console.log("USER_INFO2:", info);
+            //console.log("USER_INFO2:", info);
             users.insert({user_id:info.user_id, username:"@"+info.username, swearCount:0, totalSwearCount:0})
             
         });
+    } else {
+        console.log("User: "+user_id+" already exists in the system");
     }
     });
 }
 
 // Get list of IDs following account
 function getFollowers(user_id) {
-    console.log("user_id", user_id)
-   twit.get('/followers/ids.json', {user_id: user_id}, function(data) {
+    // console.log("user_id", user_id)
+    twit.get('/followers/ids.json', {user_id: user_id}, function(data) {
     console.log("DATA", data)
-    console.log("IDS",data.ids);
+    // console.log("IDS",data.ids);
     var followers = data.ids;
     followers.forEach(function(follower) {
-        console.log("FOLLOWER",follower);
+        // console.log("FOLLOWER",follower);
         addUser(String(follower), function(callback) {
             callback();
         });
@@ -149,27 +158,22 @@ function updateLastTweetId(user_id, last_tweet_id) {
 
 // Main function
 function keepThePeace() {
+    //getTweets("2821769120");
+    //getTweets("2821769120", "513302382969913344");
+    getFollowers("2821769120")
+
 // //Read mongo record where user_id matches
 // //  If latest_tweet_id == null:
 // //     getTweets(username)
 // //  else
 // //     getTweets(username, last_tweet_id)
 
-    //var userdata = getUserData("2821769120");
-    //console.log("data:", userdata);
-
-    //var count = getUserSwearCount("2821769120");
-    //console.log("Count",count);
-
-    getTweets("2821769120");
-    //getTweets("2821769120", "513358333106225152");
-    //getFollowers("2821769120")
     //getUserTwitterInfo("2821769120")//
 }
 
 
 
-setTimeout(function() { keepThePeace(); }, 5000);
+setInterval(function() { keepThePeace(); }, 10000);
 
 var app = express();
 
