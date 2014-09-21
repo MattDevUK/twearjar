@@ -70,17 +70,20 @@ function getTweets(user_id, last_id) {
     }
 }
 
-function getUserTwitterInfo(user_id) {
+function getUserTwitterInfo(user_id, callback) {
     twit.get('/users/show.json', {user_id: user_id}, function(data) {
             //console.log("GETINFO-DATA",data);
             user_id = data.id_str;
             console.log("GETINFO-USER_ID",user_id);
             username = data.screen_name;
             console.log("GETINFO-USERNAME",username);
-            //console.log("TWEET", tweet.text);
-            //console.log("ID", tweet.id_str);
+            var user_info = {
+                "user_id": user_id, 
+                "username": username.toLowerCase()
+            };
+            console.log("USER_INFO:", user_info);
+            callback(user_info);
     });
-        return (user_id, username);
 }
 
 
@@ -111,8 +114,8 @@ function addUser(user_id) {
     if (count === 0) {
         console.log("ADDING:", user_id);
         getUserTwitterInfo(user_id, function(info){
-            console.log("USER_INFO:", info);
-            users.update({user_id:info.user_id, username:info.username, swearCount:0})
+            console.log("USER_INFO2:", info);
+            users.insert({user_id:info.user_id, username:"@"+info.username, swearCount:0})
             
         });
     }
