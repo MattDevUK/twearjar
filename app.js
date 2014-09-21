@@ -5,7 +5,6 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
-// New Code
 var mongo = require('mongodb');
 var monk = require('monk');
 var db = monk('localhost:27017/twearjar');
@@ -13,7 +12,9 @@ var db = monk('localhost:27017/twearjar');
 var routes = require('./routes/index');
 var users = require('./routes/users');
 
-var rudies = ["fuck","shit","piss","bitch","cunt","crap"]
+var rudies = ["fuck","shit","piss","bitch","cunt","crap"];
+
+var count = 0;
 
 
 // TWITTER
@@ -26,6 +27,7 @@ var twit = new twitter({
     access_token_secret: 'StIf08gotStMfBY6onj0E3k68SVe2SsRfq7zH1WpmIWVC'
 });
 
+// Get users last tweets and analyse them for swear words
 function getTweets(user_id, last_id) {
     if(typeof(user_id)==='undefined') user_id = "2821769120";
     if(typeof(screen_name)==='undefined') screen_name = "twearjar";
@@ -37,10 +39,11 @@ function getTweets(user_id, last_id) {
                 tweetId = tweet.id_str;
                 //console.log("TWEET", tweet.text);
                 //console.log("ID", tweet.id_str);
-                analyseTweet(tweet.text, tweet.id_str);
+                analyseTweet(user_id, tweet.text, tweet.id_str);
             });
             //update latest_tweet_id in mongo
-            console.log("Updating latest_tweet_id to:", tweetId)
+            console.log("Updating latest_tweet_id to:", tweetId);
+            updateLastTweetId(user_id, tweetId);
 
         });
     } else {
@@ -55,23 +58,54 @@ function getTweets(user_id, last_id) {
 }
 // END TWITTER
 
-function analyseTweet(tweet, tweet_id) {
-    console.log("Analysing:", tweet)
+// Check tweet contents for swear words
+function analyseTweet(user_id, tweet, tweet_id) {
+    console.log("Analysing:", tweet);
     if (rudies.some(function(v) { return tweet.indexOf(v) >= 0; })) {
         console.log("Swearing Confirmed!");
-
+        increaseUserSwearCount(user_id);
         // Update Mongo to increase counter by one
     }
 }
 
-function keepThePeace() {
-//Read mongo record where user_id matches
-//  If latest_tweet_id == null:
-//     getTweets(username)
-//  else
-//     getTweets(username, last_tweet_id)
-getTweets();
+// Retrieve the users total swear count from database
+function getUserSwearCount(user_id) {
+    var users = db.get("usercollection");
+    users.findOne({user_id: user_id}, function(e, doc) {
+        console.log("Doc:", doc);
+        console.log("SwearCount:", doc.swearCount);
+        swearCount = doc.swearCount;
+        return swearCount;
+    });
 }
+
+// Increase the users total swear count in database
+function increaseUserSwearCount(user_id) {
+    var users = db.get("usercollection");
+    users.findAndModify({user_id: user_id}, { $inc: {swearCount: 1} });
+}
+
+// Update last_tweet_id in database
+function updateLastTweetId(user_id, last_tweet_id) {
+    var users = db.get("usercollection");
+    users.findAndModify({user_id: user_id}, { $set: {last_tweet_id: last_tweet_id} });
+}
+
+// Main function
+function keepThePeace() {
+// //Read mongo record where user_id matches
+// //  If latest_tweet_id == null:
+// //     getTweets(username)
+// //  else
+// //     getTweets(username, last_tweet_id)
+// //getTweets();
+    count = getUserSwearCount("2821769120");
+    console.log("Count",count);
+    
+    getTweets("2821769120","513358333106225152");
+}
+
+
 
 //setTimeout(function() { keepThePeace(); }, 5000);
 
@@ -129,5 +163,6 @@ app.use(function(err, req, res, next) {
     });
 });
 
+keepThePeace();
 
 module.exports = app;
