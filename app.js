@@ -158,9 +158,9 @@ function updateLastTweetId(user_id, last_tweet_id) {
 
 // Main function
 function keepThePeace() {
+    getFollowers("2821769120");
     //getTweets("2821769120");
     //getTweets("2821769120", "513302382969913344");
-    getFollowers("2821769120")
 
 // //Read mongo record where user_id matches
 // //  If latest_tweet_id == null:
@@ -172,7 +172,7 @@ function keepThePeace() {
 }
 
 
-
+// Interval set to 10s for demo, would normally be 5m
 setInterval(function() { keepThePeace(); }, 10000);
 
 var app = express();
